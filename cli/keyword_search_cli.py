@@ -17,6 +17,11 @@ def main() -> None:
         case "search":
             print(f"Searching for: {args.query}")
 
+            results = search_command(args.query)
+
+            for index, match in enumerate(results):
+                print(f"{index + 1}. {match["title"]}")
+
         case _:
             parser.print_help()
 
