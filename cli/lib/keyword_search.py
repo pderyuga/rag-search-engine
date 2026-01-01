@@ -1,3 +1,4 @@
+import string
 from .search_utils import DEFAULT_SEARCH_LIMIT, load_movies
 
 
@@ -19,4 +20,6 @@ def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
 
 def preprocess_text(text: str):
     text = text.lower()
-    return text
+    translation_table = str.maketrans("", "", string.punctuation)
+    translated_text = text.translate(translation_table)
+    return translated_text
