@@ -64,6 +64,14 @@ def idf_command(term: str):
     return idf
 
 
+def tf_idf_command(doc_id: int, term: str):
+    idx = InvertedIndex()
+    idx.load()
+
+    tf_idf = idx.get_tf_idf(doc_id, term)
+    return tf_idf
+
+
 def has_matching_token(query_tokens: list[str], title_tokens: list[str]):
     for query_token in query_tokens:
         for title_token in title_tokens:
@@ -194,3 +202,14 @@ class InvertedIndex:
 
         idf = math.log((total_doc_count + 1) / (term_match_doc_count + 1))
         return idf
+
+    def get_tf_idf(self, doc_id: int, term: str):
+        tokens = tokenize_text(term)
+
+        if len(tokens) != 1:
+            raise ValueError("Search term must be one word.")
+
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+        tf_idf = tf * idf
+        return tf_idf
