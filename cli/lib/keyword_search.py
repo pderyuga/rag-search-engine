@@ -1,4 +1,5 @@
 import os
+import sys
 import string
 import pickle
 from typing import Set, TypedDict
@@ -14,20 +15,31 @@ from .search_utils import (
 
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
-    movies = load_movies()
+    idx = InvertedIndex()
+    idx.load()
 
-    matches = []
-    for movie in movies:
-        query_tokens = tokenize_text(query)
-        title_tokens = tokenize_text(movie["title"])
-        is_item_present = has_matching_token(query_tokens, title_tokens)
-        if is_item_present:
-            matches.append(movie)
+    matches = set()
+    query_tokens = tokenize_text(query)
+    for token in query_tokens:
+        if token in idx.index:
+            doc_ids = idx.index[token]
+            matches.update(doc_ids)
 
-    sorted_matches = sorted(matches, key=lambda match: match["id"])
+    sorted_matches = sorted(list(matches))
     sliced_matches = sorted_matches[:limit]
 
-    return sliced_matches
+    matching_movies: list[Movie] = []
+    for doc_id in sliced_matches:
+        if doc_id in idx.docmap:
+            matching_movies.append(idx.docmap[doc_id])
+
+    return matching_movies
+
+
+def build_command():
+    idx = InvertedIndex()
+    idx.build()
+    idx.save()
 
 
 def has_matching_token(query_tokens: list[str], title_tokens: list[str]):
@@ -105,3 +117,17 @@ class InvertedIndex:
             pickle.dump(self.index, f)
         with open(DOCMAP_PATH, "wb") as f:
             pickle.dump(self.docmap, f)
+
+    def load(self):
+        try:
+            with open(INDEX_PATH, "rb") as f:
+                self.index = pickle.load(f)
+            with open(DOCMAP_PATH, "rb") as f:
+                self.docmap = pickle.load(f)
+        except FileNotFoundError as e:
+            print(f"Error: Cache files not found. Please run 'build' command first.")
+            print(f"Details: {e}")
+            sys.exit()
+        except Exception as e:
+            print(f"An unexpected error occurred while loading cache: {e}")
+            sys.exit()
