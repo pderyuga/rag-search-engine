@@ -1,6 +1,16 @@
+import os
 import string
+import pickle
+from typing import Set, TypedDict
 from nltk.stem import PorterStemmer
-from .search_utils import DEFAULT_SEARCH_LIMIT, load_movies, load_stopwords
+from .search_utils import (
+    DEFAULT_SEARCH_LIMIT,
+    load_movies,
+    load_stopwords,
+    CACHE_PATH,
+    INDEX_PATH,
+    DOCMAP_PATH,
+)
 
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
@@ -48,3 +58,50 @@ def tokenize_text(text: str):
             valid_tokens.append(stemmed_token)
 
     return valid_tokens
+
+
+class Movie(TypedDict):
+    id: int
+    title: str
+    description: str
+
+
+class InvertedIndex:
+    def __init__(self):
+        self.index: dict[str, Set[int]] = {}
+        self.docmap: dict[int, Movie] = {}
+
+    def __add_document(self, doc_id: int, text: str):
+        # tokenize input text
+        tokenized_text = tokenize_text(text)
+        # add each token to the index with the doc_id
+        for token in set(tokenized_text):
+            if token in self.index:
+                self.index[token].add(doc_id)
+            else:
+                self.index[token] = set([doc_id])
+
+    def get_documents(self, term: str):
+        token = term.lower()
+        # get a set of doc_id for a given token
+        for current_token, doc_ids in self.index.items():
+            if token == current_token:
+                # return the doc ids as a list sorted in asc order
+                return sorted(list(doc_ids))
+        return []
+
+    def build(self):
+        movies = load_movies()
+        # iterate over all the movies and add them to both the index and the docmap
+        for movie in movies:
+            self.__add_document(movie["id"], f"{movie["title"]} {movie["description"]}")
+            self.docmap[movie["id"]] = movie
+
+    def save(self):
+        if not os.path.isdir(CACHE_PATH):
+            os.makedirs(CACHE_PATH)
+
+        with open(INDEX_PATH, "wb") as f:
+            pickle.dump(self.index, f)
+        with open(DOCMAP_PATH, "wb") as f:
+            pickle.dump(self.docmap, f)
