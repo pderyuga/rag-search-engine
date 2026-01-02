@@ -1,6 +1,7 @@
 import os
 import sys
 import string
+import math
 import pickle
 from typing import Set, TypedDict
 from collections import Counter
@@ -53,6 +54,14 @@ def tf_command(doc_id: int, term: str):
         tf = idx.term_frequencies[doc_id][term]
 
     return tf
+
+
+def idf_command(term: str):
+    idx = InvertedIndex()
+    idx.load()
+
+    idf = idx.get_idf(term)
+    return idf
 
 
 def has_matching_token(query_tokens: list[str], title_tokens: list[str]):
@@ -170,3 +179,18 @@ class InvertedIndex:
             return self.term_frequencies[doc_id][tokens[0]]
         else:
             return 0
+
+    def get_idf(self, term: str):
+        tokens = tokenize_text(term)
+
+        if len(tokens) != 1:
+            raise ValueError("Search term must be one word.")
+
+        total_doc_count = len(self.docmap)
+        if tokens[0] in self.index:
+            term_match_doc_count = len(self.index[tokens[0]])
+        else:
+            term_match_doc_count = 0
+
+        idf = math.log((total_doc_count + 1) / (term_match_doc_count + 1))
+        return idf
