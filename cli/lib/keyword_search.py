@@ -8,6 +8,7 @@ from collections import Counter
 from nltk.stem import PorterStemmer
 from .search_utils import (
     DEFAULT_SEARCH_LIMIT,
+    BM25_K1,
     load_movies,
     load_stopwords,
     CACHE_PATH,
@@ -78,6 +79,14 @@ def bm25_idf_command(term: str):
 
     bm25_idf = idx.get_bm25_idf(term)
     return bm25_idf
+
+
+def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1):
+    idx = InvertedIndex()
+    idx.load()
+
+    bm25_tf = idx.get_bm25_tf(doc_id, term, k1)
+    return bm25_tf
 
 
 def has_matching_token(query_tokens: list[str], title_tokens: list[str]):
@@ -240,3 +249,8 @@ class InvertedIndex:
             + 1
         )
         return bm25_idf
+
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1):
+        tf = self.get_tf(doc_id, term)
+        bm25_tf = (tf * (k1 + 1)) / (tf + k1)
+        return bm25_tf
