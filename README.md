@@ -1,11 +1,14 @@
 # RAG Search Engine
 
-A movie search engine built using Retrieval-Augmented Generation (RAG) concepts, implementing BM25 keyword search with Python. This project is based on [Boot.dev's "Learn Retrieval Augmented Generation" course](https://www.boot.dev/courses/learn-retrieval-augmented-generation).
+A movie search engine built using Retrieval-Augmented Generation (RAG) concepts, implementing BM25 keyword search and semantic search with embeddings. This project is based on [Boot.dev's "Learn Retrieval Augmented Generation" course](https://www.boot.dev/courses/learn-retrieval-augmented-generation).
 
 ## Prerequisites
 
 - Python 3.13
 - `uv` package manager (for dependency management)
+- Dependencies:
+  - `nltk==3.9.1` (for text processing)
+  - `sentence-transformers>=5.2.0` (for semantic search embeddings)
 
 ## Setup Instructions
 
@@ -318,19 +321,81 @@ Example:
 python cli/keyword_search_cli.py tfidf 1 "princess"
 ```
 
+### BM25 IDF Command
+
+Get the BM25 inverse document frequency for a term:
+
+```bash
+python cli/keyword_search_cli.py bm25idf <term>
+```
+
+Example:
+
+```bash
+python cli/keyword_search_cli.py bm25idf "princess"
+```
+
+### BM25 TF Command
+
+Get the BM25 term frequency for a term in a specific document. Optionally specify k1 and b tuning parameters:
+
+```bash
+python cli/keyword_search_cli.py bm25tf <document_id> <term> [k1] [b]
+```
+
+Example:
+
+```bash
+python cli/keyword_search_cli.py bm25tf 1 "princess"
+python cli/keyword_search_cli.py bm25tf 1 "princess" 1.5 0.75
+```
+
+### BM25 Search Command
+
+Search for movies using the full BM25 ranking algorithm (more sophisticated than basic search):
+
+```bash
+python cli/keyword_search_cli.py bm25search "your search query"
+```
+
+Example:
+
+```bash
+python cli/keyword_search_cli.py bm25search "space adventure"
+```
+
+This returns movies ranked by BM25 scores, which considers term frequency, document frequency, and document length normalization.
+
+## Semantic Search
+
+The project includes a semantic search CLI that uses sentence transformer embeddings for meaning-based search (as opposed to keyword matching).
+
+### Verify Embedding Model
+
+Verify that the sentence transformer embedding model is properly loaded:
+
+```bash
+python cli/semantic_search_cli.py verify
+```
+
+This command will download the embedding model on first run and verify it's working correctly.
+
 ## Project Structure
 
 ```
 rag-search-engine/
-├── .cache/                       # Cache directory (created after build)
+├── cache/                        # Cache directory (created after build)
 │   ├── index.pkl                 # Pickled inverted index
 │   ├── docmap.pkl                # Pickled document mapping
-│   └── tf.pkl                    # Pickled term frequencies
+│   ├── tf.pkl                    # Pickled term frequencies
+│   └── doc_lengths.pkl           # Pickled document lengths
 ├── cli/
-│   ├── keyword_search_cli.py    # Main CLI entry point
+│   ├── keyword_search_cli.py    # Keyword search CLI entry point
+│   ├── semantic_search_cli.py   # Semantic search CLI entry point
 │   └── lib/
-│       ├── keyword_search.py     # Search implementation
-│       └── search_utils.py       # Utility functions
+│       ├── keyword_search.py     # Keyword search implementation
+│       ├── semantic_search.py    # Semantic search implementation
+│       └── search_utils.py       # Shared utility functions
 ├── data/
 │   ├── movies.json               # Movie dataset (download required)
 │   └── stopwords.txt             # Stop words for text processing
@@ -340,7 +405,7 @@ rag-search-engine/
 └── README.md                     # This file
 ```
 
-**Note:** The `.cache/` directory is automatically created when you run the `build` command and contains the processed index data for fast lookups.
+**Note:** The `cache/` directory is automatically created when you run the `build` command and contains the processed index data for fast lookups. The first time you run semantic search commands, the sentence transformer model will be downloaded automatically.
 
 ## Notes
 
