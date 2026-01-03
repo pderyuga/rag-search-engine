@@ -238,11 +238,31 @@ yourself
 yourselves
 ```
 
+### 5. Build the Inverted Index
+
+Before you can search, you need to build the inverted index from the movie data:
+
+```bash
+python cli/keyword_search_cli.py build
+```
+
+This will process all movies and create cached index files in the `.cache/` directory. You only need to run this once (or whenever you update the movie dataset).
+
 ## Usage
 
-### Running the Keyword Search CLI
+The CLI provides several commands for searching and analyzing the movie dataset:
 
-To search for movies using the BM25 algorithm:
+### Build Command
+
+Build or rebuild the inverted index:
+
+```bash
+python cli/keyword_search_cli.py build
+```
+
+### Search Command
+
+Search for movies using keyword matching:
 
 ```bash
 python cli/keyword_search_cli.py search "your search query"
@@ -256,10 +276,56 @@ python cli/keyword_search_cli.py search "space adventure"
 
 This will return a ranked list of movies matching your query.
 
+### Term Frequency (TF) Command
+
+Get the frequency of a specific term in a specific document:
+
+```bash
+python cli/keyword_search_cli.py tf <document_id> <term>
+```
+
+Example:
+
+```bash
+python cli/keyword_search_cli.py tf 1 "princess"
+```
+
+### Inverse Document Frequency (IDF) Command
+
+Get the inverse document frequency for a term across all documents:
+
+```bash
+python cli/keyword_search_cli.py idf <term>
+```
+
+Example:
+
+```bash
+python cli/keyword_search_cli.py idf "princess"
+```
+
+### TF-IDF Command
+
+Get the TF-IDF score for a term in a specific document:
+
+```bash
+python cli/keyword_search_cli.py tfidf <document_id> <term>
+```
+
+Example:
+
+```bash
+python cli/keyword_search_cli.py tfidf 1 "princess"
+```
+
 ## Project Structure
 
 ```
 rag-search-engine/
+├── .cache/                       # Cache directory (created after build)
+│   ├── index.pkl                 # Pickled inverted index
+│   ├── docmap.pkl                # Pickled document mapping
+│   └── tf.pkl                    # Pickled term frequencies
 ├── cli/
 │   ├── keyword_search_cli.py    # Main CLI entry point
 │   └── lib/
@@ -268,10 +334,13 @@ rag-search-engine/
 ├── data/
 │   ├── movies.json               # Movie dataset (download required)
 │   └── stopwords.txt             # Stop words for text processing
+├── .gitignore                    # Git ignore rules
 ├── pyproject.toml                # Project configuration
 ├── uv.lock                       # Dependency lock file
 └── README.md                     # This file
 ```
+
+**Note:** The `.cache/` directory is automatically created when you run the `build` command and contains the processed index data for fast lookups.
 
 ## Notes
 
