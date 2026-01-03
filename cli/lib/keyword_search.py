@@ -42,6 +42,14 @@ def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
     return matching_movies
 
 
+def bm25_search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
+    idx = InvertedIndex()
+    idx.load()
+
+    matching_movies = idx.bm25_search(query, limit)
+    return matching_movies
+
+
 def build_command():
     idx = InvertedIndex()
     idx.build()
@@ -125,6 +133,13 @@ class Movie(TypedDict):
     id: int
     title: str
     description: str
+
+
+class SearchResult(TypedDict):
+    id: int
+    title: str
+    description: str
+    score: float
 
 
 class InvertedIndex:
@@ -281,3 +296,42 @@ class InvertedIndex:
 
         bm25_tf = (tf * (k1 + 1)) / (tf + k1 * length_norm)
         return bm25_tf
+
+    def bm25(self, doc_id: int, term: str):
+        bm25_tf = self.get_bm25_tf(doc_id, term)
+        bm25_idf = self.get_bm25_idf(term)
+
+        bm25 = bm25_tf * bm25_idf
+        return bm25
+
+    def bm25_search(self, query: str, limit: int):
+        # tokenize the query
+        tokens = tokenize_text(query)
+
+        # initialize scores dictionary to map doc_id to BM25 score
+        scores: dict[int, float] = {}
+
+        # for each document in the index, calculate the total BM25 score
+        for doc_id in self.docmap:
+            bm25 = 0.0
+            for token in tokens:
+                bm25 += self.bm25(doc_id, token)
+            scores[doc_id] = bm25
+
+        # sort the documents by score in descending order
+        sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+
+        # return the top limit documents along with their scores
+        top_scores = sorted_scores[:limit]
+
+        results: list[SearchResult] = []
+        for doc_id, score in top_scores:
+            doc = self.docmap[doc_id]
+            search_result: SearchResult = {}
+            search_result["id"] = doc["id"]
+            search_result["title"] = doc["title"]
+            search_result["description"] = doc["description"]
+            search_result["score"] = score
+            results.append(search_result)
+
+        return results

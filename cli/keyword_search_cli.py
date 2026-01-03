@@ -9,6 +9,7 @@ from lib.keyword_search import (
     tf_idf_command,
     bm25_idf_command,
     bm25_tf_command,
+    bm25_search_command,
 )
 from lib.search_utils import BM25_K1, BM25_B
 
@@ -58,6 +59,11 @@ def main() -> None:
         "b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter"
     )
 
+    bm25search_parser = subparsers.add_parser(
+        "bm25search", help="Search movies using full BM25 scoring"
+    )
+    bm25search_parser.add_argument("query", type=str, help="Search query")
+
     args = parser.parse_args()
 
     match args.command:
@@ -66,8 +72,18 @@ def main() -> None:
 
             results = search_command(args.query)
 
-            for index, match in enumerate(results):
-                print(f"{index + 1}. {match["title"]}")
+            for index, movie in enumerate(results):
+                print(f"{index + 1}. ({movie["id"]}) {movie["title"]}")
+
+        case "bm25search":
+            print(f"Searching for: {args.query}")
+
+            results = bm25_search_command(args.query)
+
+            for index, search_result in enumerate(results):
+                print(
+                    f"{index + 1}. ({search_result["id"]}) {search_result["title"]} - {search_result["score"]:.2f}"
+                )
 
         case "build":
             print("Building inverted index...")
