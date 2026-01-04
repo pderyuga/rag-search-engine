@@ -380,6 +380,95 @@ python cli/semantic_search_cli.py verify
 
 This command will download the embedding model on first run and verify it's working correctly.
 
+### Embed Text Command
+
+Generate an embedding vector for any text and view its dimensions:
+
+```bash
+python cli/semantic_search_cli.py embed_text "your text here"
+```
+
+Example:
+
+```bash
+python cli/semantic_search_cli.py embed_text "space adventure movie"
+```
+
+This displays the first 3 dimensions and total dimensionality of the embedding vector.
+
+### Verify Embeddings Command
+
+Build or verify embeddings for the entire movie dataset:
+
+```bash
+python cli/semantic_search_cli.py verify_embeddings
+```
+
+This loads existing embeddings from cache or creates new ones if needed, then displays the embedding matrix shape.
+
+### Embed Query Command
+
+Generate an embedding specifically for a search query:
+
+```bash
+python cli/semantic_search_cli.py embedquery "your query"
+```
+
+Example:
+
+```bash
+python cli/semantic_search_cli.py embedquery "romantic comedy"
+```
+
+### Semantic Search Command
+
+Search for movies using semantic similarity (the main semantic search feature):
+
+```bash
+python cli/semantic_search_cli.py search "your query" [--limit N]
+```
+
+Example:
+
+```bash
+python cli/semantic_search_cli.py search "space adventure"
+python cli/semantic_search_cli.py search "love story" --limit 5
+```
+
+This uses cosine similarity between query and movie embeddings to find semantically similar movies, even if they don't share exact keywords.
+
+### Chunk Text Command
+
+Split text into fixed-size word-based chunks with optional overlap:
+
+```bash
+python cli/semantic_search_cli.py chunk "your text" [--chunk-size N] [--overlap N]
+```
+
+Example:
+
+```bash
+python cli/semantic_search_cli.py chunk "This is a long text that needs chunking" --chunk-size 5 --overlap 2
+```
+
+Useful for processing long documents that exceed embedding model limits.
+
+### Semantic Chunk Command
+
+Split text into sentence-based semantic chunks with optional overlap:
+
+```bash
+python cli/semantic_search_cli.py semantic_chunk "your text" [--max-chunk-size N] [--overlap N]
+```
+
+Example:
+
+```bash
+python cli/semantic_search_cli.py semantic_chunk "First sentence. Second sentence. Third sentence." --max-chunk-size 2 --overlap 1
+```
+
+This respects sentence boundaries for more meaningful chunks.
+
 ## Project Structure
 
 ```
@@ -388,7 +477,8 @@ rag-search-engine/
 │   ├── index.pkl                 # Pickled inverted index
 │   ├── docmap.pkl                # Pickled document mapping
 │   ├── tf.pkl                    # Pickled term frequencies
-│   └── doc_lengths.pkl           # Pickled document lengths
+│   ├── doc_lengths.pkl           # Pickled document lengths
+│   └── movie_embeddings.npy      # Cached movie embeddings for semantic search
 ├── cli/
 │   ├── keyword_search_cli.py    # Keyword search CLI entry point
 │   ├── semantic_search_cli.py   # Semantic search CLI entry point
@@ -405,7 +495,7 @@ rag-search-engine/
 └── README.md                     # This file
 ```
 
-**Note:** The `cache/` directory is automatically created when you run the `build` command and contains the processed index data for fast lookups. The first time you run semantic search commands, the sentence transformer model will be downloaded automatically.
+**Note:** The `cache/` directory is automatically created when you run the `build` command (for keyword search) or when you first run semantic search commands (which creates `movie_embeddings.npy`). The sentence transformer model itself is downloaded by the library and cached separately on first use.
 
 ## Notes
 
