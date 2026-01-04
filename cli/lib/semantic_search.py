@@ -2,7 +2,12 @@ import os
 import numpy as np
 from typing import TypedDict
 from sentence_transformers import SentenceTransformer
-from .search_utils import load_movies, MOVIE_EMBEDDINGS_PATH, DEFAULT_SEARCH_LIMIT
+from .search_utils import (
+    load_movies,
+    MOVIE_EMBEDDINGS_PATH,
+    DEFAULT_SEARCH_LIMIT,
+    DEFAULT_CHUNK_SIZE,
+)
 
 
 class Movie(TypedDict):
@@ -164,3 +169,23 @@ def semantic_search(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
         print(
             f"{index + 1}. {search_result["title"]} (Score: {search_result["score"]:.4f})\n{search_result["description"]}\n"
         )
+
+
+def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE):
+    word_list = text.split()
+
+    chunks: list[list[str]] = []
+    # Step through the word_list in increments of 'chunk_size'
+    for i in range(0, len(word_list), chunk_size):
+        # Extract a chunk from index i to i+chunk_size
+        chunk = word_list[i : i + chunk_size]
+        chunks.append(chunk)
+
+    text_chunks: list[str] = []
+    for chunk in chunks:
+        text_chunk = " ".join(chunk)
+        text_chunks.append(text_chunk)
+
+    print(f"Chunking {len(text)} characters")
+    for index, text_chunk in enumerate(text_chunks, 1):
+        print(f"{index}. {text_chunk}")
