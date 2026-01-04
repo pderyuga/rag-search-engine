@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 from typing import TypedDict
 from sentence_transformers import SentenceTransformer
@@ -8,6 +9,7 @@ from .search_utils import (
     DEFAULT_SEARCH_LIMIT,
     DEFAULT_CHUNK_SIZE,
     DEFAULT_CHUNK_OVERLAP,
+    DEFAULT_SEMANTIC_CHUNK_SIZE,
 )
 
 
@@ -205,3 +207,30 @@ def chunk_text(
     print(f"Chunking {len(text)} characters")
     for index, text_chunk in enumerate(text_chunks, 1):
         print(f"{index}. {text_chunk}")
+
+
+def semantic_chunk_text(
+    text: str,
+    max_chunk_size: int = DEFAULT_SEMANTIC_CHUNK_SIZE,
+    overlap: int = DEFAULT_CHUNK_OVERLAP,
+):
+    if overlap >= max_chunk_size:
+        raise ValueError("Max chunk size must be greater than overlap")
+
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+
+    chunks: list[list[str]] = []
+    i = 0
+    while i < len(sentences) and (len(sentences) - i) > overlap:
+        chunk = sentences[i : i + max_chunk_size]
+        chunks.append(chunk)
+        i += max_chunk_size - overlap
+
+    sentence_chunks: list[str] = []
+    for chunk in chunks:
+        sentence_chunk = " ".join(chunk)
+        sentence_chunks.append(sentence_chunk)
+
+    print(f"Semantically chunking {len(text)} characters")
+    for index, sentence_chunk in enumerate(sentence_chunks, 1):
+        print(f"{index}. {sentence_chunk}")
