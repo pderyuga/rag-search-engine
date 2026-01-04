@@ -2,13 +2,20 @@ import os
 import numpy as np
 from typing import TypedDict
 from sentence_transformers import SentenceTransformer
-from .search_utils import load_movies, MOVIE_EMBEDDINGS_PATH
+from .search_utils import load_movies, MOVIE_EMBEDDINGS_PATH, DEFAULT_SEARCH_LIMIT
 
 
 class Movie(TypedDict):
     id: int
     title: str
     description: str
+
+
+class SearchResult(TypedDict):
+    id: int
+    title: str
+    description: str
+    score: float
 
 
 class SemanticSearch:
@@ -62,16 +69,49 @@ class SemanticSearch:
 
         return self.build_embeddings(documents)
 
+    def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT):
+        if self.embeddings is None or len(self.embeddings) == 0:
+            raise ValueError(
+                "No embeddings loaded. Call `load_or_create_embeddings` first."
+            )
+
+        if self.documents is None or len(self.documents) == 0:
+            raise ValueError(
+                "No documents loaded. Call `load_or_create_embeddings` first."
+            )
+
+        query_embedding = self.generate_embedding(query)
+
+        documents: list[tuple[float, Movie]] = []
+        for index, embedding in enumerate(self.embeddings):
+            similarity_score = cosine_similarity(query_embedding, embedding)
+            documents.append((similarity_score, self.document_map[index + 1]))
+
+        sorted_documents = sorted(documents, key=lambda item: item[0], reverse=True)
+
+        top_documents = sorted_documents[:limit]
+
+        results: list[SearchResult] = []
+        for score, doc in top_documents:
+            search_result: SearchResult = {}
+            search_result["id"] = doc["id"]
+            search_result["title"] = doc["title"]
+            search_result["description"] = doc["description"]
+            search_result["score"] = score
+            results.append(search_result)
+
+        return results
+
 
 def verify_model():
-    semantic_search = SemanticSearch()
-    print(f"Model loaded: {semantic_search.model}")
-    print(f"Max sequence length: {semantic_search.model.max_seq_length}")
+    search_instance = SemanticSearch()
+    print(f"Model loaded: {search_instance.model}")
+    print(f"Max sequence length: {search_instance.model.max_seq_length}")
 
 
 def embed_text(text: str):
-    semantic_search = SemanticSearch()
-    embedding = semantic_search.generate_embedding(text)
+    search_instance = SemanticSearch()
+    embedding = search_instance.generate_embedding(text)
 
     print(f"Text: {text}")
     print(f"First 3 dimensions: {embedding[:3]}")
@@ -79,9 +119,9 @@ def embed_text(text: str):
 
 
 def verify_embeddings():
-    semantic_search = SemanticSearch()
+    search_instance = SemanticSearch()
     documents = load_movies()
-    embeddings = semantic_search.load_or_create_embeddings(documents)
+    embeddings = search_instance.load_or_create_embeddings(documents)
 
     print(f"Number of docs:   {len(documents)}")
     print(
@@ -90,9 +130,37 @@ def verify_embeddings():
 
 
 def embed_query_text(query: str):
-    emantic_search = SemanticSearch()
-    embedding = emantic_search.generate_embedding(query)
+    search_instance = SemanticSearch()
+    embedding = search_instance.generate_embedding(query)
 
     print(f"Query: {query}")
     print(f"First 5 dimensions: {embedding[:5]}")
     print(f"Shape: {embedding.shape}")
+
+
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    return dot_product / (norm1 * norm2)
+
+
+def semantic_search(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
+    search_instance = SemanticSearch()
+    documents = load_movies()
+    search_instance.load_or_create_embeddings(documents)
+
+    results = search_instance.search(query, limit)
+
+    print(f"Query: {query}")
+    print(f"Top {len(results)} results:")
+    print()
+
+    for index, search_result in enumerate(results):
+        print(
+            f"{index + 1}. {search_result["title"]} (Score: {search_result["score"]:.4f})\n{search_result["description"]}\n"
+        )
