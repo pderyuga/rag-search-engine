@@ -7,6 +7,7 @@ from .search_utils import (
     MOVIE_EMBEDDINGS_PATH,
     DEFAULT_SEARCH_LIMIT,
     DEFAULT_CHUNK_SIZE,
+    DEFAULT_CHUNK_OVERLAP,
 )
 
 
@@ -171,15 +172,30 @@ def semantic_search(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
         )
 
 
-def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE):
+def chunk_text(
+    text: str,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    overlap: int = DEFAULT_CHUNK_OVERLAP,
+):
+    if overlap >= chunk_size:
+        raise ValueError("Chunk size must be greater than overlap")
+
     word_list = text.split()
 
     chunks: list[list[str]] = []
-    # Step through the word_list in increments of 'chunk_size'
-    for i in range(0, len(word_list), chunk_size):
-        # Extract a chunk from index i to i+chunk_size
+
+    # Sliding window chunking with overlap
+    i = 0
+    # Continue while:
+    #   1. We haven't reached the end (i < len(word_list))
+    #   2. Remaining words exceed overlap (prevents redundant chunks)
+    while i < len(word_list) and (len(word_list) - i) > overlap:
+        # Extract chunk_size words starting at position i
         chunk = word_list[i : i + chunk_size]
         chunks.append(chunk)
+        # Advance by (chunk_size - overlap) so next chunk overlaps
+        # Example: chunk_size=5, overlap=2 → advance by 3
+        i += chunk_size - overlap
 
     text_chunks: list[str] = []
     for chunk in chunks:
