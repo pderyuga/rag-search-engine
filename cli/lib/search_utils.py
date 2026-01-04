@@ -13,6 +13,7 @@ INDEX_PATH = os.path.join(CACHE_PATH, "index.pkl")
 DOCMAP_PATH = os.path.join(CACHE_PATH, "docmap.pkl")
 TF_PATH = os.path.join(CACHE_PATH, "term_frequencies.pkl")
 DOC_LENGTHS_PATH = os.path.join(CACHE_PATH, "doc_lengths.pkl")
+MOVIE_EMBEDDINGS_PATH = os.path.join(CACHE_PATH, "movie_embeddings.npy")
 
 
 def load_movies() -> list[dict]:
