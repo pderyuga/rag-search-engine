@@ -117,7 +117,7 @@ def main() -> None:
             )
 
         case _:
-            parser.print_help()
+            parser.exit(2, parser.format_help())
 
 
 if __name__ == "__main__":

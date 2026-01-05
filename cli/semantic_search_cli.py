@@ -137,7 +137,7 @@ def main():
             search_chunked(args.query, args.limit)
 
         case _:
-            parser.print_help()
+            parser.exit(2, parser.format_help())
 
 
 if __name__ == "__main__":
