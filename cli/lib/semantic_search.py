@@ -13,6 +13,8 @@ from .search_utils import (
     DEFAULT_SEMANTIC_CHUNK_SIZE,
     CHUNK_EMBEDDINGS_PATH,
     CHUNK_METADATA_PATH,
+    SCORE_PRECISION,
+    DOCUMENT_PREVIEW_LENGTH,
 )
 
 
@@ -200,6 +202,70 @@ class ChunkedSemanticSearch(SemanticSearch):
 
         return self.build_chunk_embeddings(documents)
 
+    def search_chunks(self, query: str, limit: int = 10):
+        if self.chunk_embeddings is None or self.chunk_metadata is None:
+            raise ValueError(
+                "No chunk embeddings loaded. Call `load_or_create_chunk_embeddings` first."
+            )
+
+        # Generate an embedding of the query
+        query_embedding = self.generate_embedding(query)
+
+        # Populate an empty list to store "chunk score" dictionaries
+        chunk_scores: list[ChunkScore] = []
+        # For each chunk embedding
+        for chunk_embedding_index, chunk_embedding in enumerate(self.chunk_embeddings):
+            # Calculate the cosine similarity between the chunk embedding and the query embedding
+            similarity_score = cosine_similarity(query_embedding, chunk_embedding)
+            # Append a dictionary to the chunk score list with fields:
+            chunk_score: ChunkScore = {}
+            # chunk_idx: The index of the chunk within the document
+            chunk_score["chunk_idx"] = self.chunk_metadata[chunk_embedding_index][
+                "chunk_idx"
+            ]
+            # movie_idx: The index of the document in self.documents (you'll need to use self.chunk_metadata to map back to this)
+            chunk_score["movie_idx"] = self.chunk_metadata[chunk_embedding_index][
+                "movie_idx"
+            ]
+            # The cosine similarity score
+            chunk_score["score"] = similarity_score
+            chunk_scores.append(chunk_score)
+
+        # Create an empty dictionary that maps movie indexes to their scores
+        movie_scores: dict[int, float] = {}
+        # For each chunk score,
+        for chunk_score in chunk_scores:
+            # if the movie_idx is not in the movie score dictionary yet,
+            # or the new score is higher than the existing one,
+            if (
+                chunk_score["movie_idx"] not in movie_scores
+                or chunk_score["score"] > movie_scores[chunk_score["movie_idx"]]
+            ):
+                # update the movie score dictionary with the new chunk score.
+                movie_scores[chunk_score["movie_idx"]] = chunk_score["score"]
+
+        # Sort the movie scores by score in descending order.
+        sorted_movie_scores = sorted(
+            movie_scores.items(), key=lambda item: item[1], reverse=True
+        )
+
+        # Filter down to the top `limit` movies.
+        top_movie_scores = sorted_movie_scores[:limit]
+
+        # Format the results and limit the movie description to the first 100 characters.
+        results: list[SemanticSearchResult] = []
+        for doc_id, score in top_movie_scores:
+            doc = self.documents[doc_id]
+            search_result: SemanticSearchResult = {}
+            search_result["id"] = doc["id"]
+            search_result["title"] = doc["title"]
+            search_result["description"] = doc["description"][:DOCUMENT_PREVIEW_LENGTH]
+            search_result["score"] = round(score, SCORE_PRECISION)
+            search_result["metadata"] = self.chunk_metadata
+            results.append(search_result)
+        # Return the final list of results.
+        return results
+
 
 def verify_model():
     search_instance = SemanticSearch()
@@ -334,3 +400,17 @@ def embed_chunks():
     embeddings = search_instance.load_or_create_chunk_embeddings(documents)
 
     print(f"Generated {len(embeddings)} chunked embeddings")
+
+
+def search_chunked(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
+    search_instance = ChunkedSemanticSearch()
+    documents = load_movies()
+    search_instance.load_or_create_chunk_embeddings(documents)
+
+    results = search_instance.search_chunks(query, limit)
+
+    print(f"Query: {query}")
+    print("Results:")
+    for i, result in enumerate(results, 1):
+        print(f"\n{i}. {result["title"]} (score: {result["score"]:.4f})")
+        print(f"   {result["description"]}...")

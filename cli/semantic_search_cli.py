@@ -10,6 +10,7 @@ from lib.semantic_search import (
     chunk_text,
     semantic_chunk_text,
     embed_chunks,
+    search_chunked,
 )
 from lib.search_utils import (
     DEFAULT_SEARCH_LIMIT,
@@ -93,6 +94,18 @@ def main():
         "embed_chunks", help="Generate embeddings for chunked documents"
     )
 
+    search_chunked_parser = subparsers.add_parser(
+        "search_chunked", help="Search chunked embeddings"
+    )
+    search_chunked_parser.add_argument("query", type=str, help="Search query")
+    search_chunked_parser.add_argument(
+        "--limit",
+        type=int,
+        nargs="?",
+        default=DEFAULT_SEARCH_LIMIT,
+        help="Maximum results to return",
+    )
+
     args = parser.parse_args()
 
     match args.command:
@@ -119,6 +132,9 @@ def main():
 
         case "embed_chunks":
             embed_chunks()
+
+        case "search_chunked":
+            search_chunked(args.query, args.limit)
 
         case _:
             parser.print_help()
