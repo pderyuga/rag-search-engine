@@ -12,6 +12,9 @@ DEFAULT_CHUNK_SIZE = 200
 DEFAULT_CHUNK_OVERLAP = 1
 DEFAULT_SEMANTIC_CHUNK_SIZE = 4
 
+DEFAULT_ALPHA = 0.5
+SEARCH_LIMIT_MULTIPLIER = 500
+
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 DATA_PATH = os.path.join(PROJECT_ROOT, "data", "movies.json")
@@ -25,6 +28,7 @@ DOC_LENGTHS_PATH = os.path.join(CACHE_PATH, "doc_lengths.pkl")
 MOVIE_EMBEDDINGS_PATH = os.path.join(CACHE_PATH, "movie_embeddings.npy")
 CHUNK_EMBEDDINGS_PATH = os.path.join(CACHE_PATH, "chunk_embeddings.npy")
 CHUNK_METADATA_PATH = os.path.join(CACHE_PATH, "chunk_metadata.json")
+
 
 def load_movies() -> list[dict]:
     with open(DATA_PATH, "r") as f:
