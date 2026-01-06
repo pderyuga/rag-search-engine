@@ -12,6 +12,7 @@ from .search_utils import (
     SEARCH_LIMIT_MULTIPLIER,
     DOCUMENT_PREVIEW_LENGTH,
     SCORE_PRECISION,
+    DEFAULT_RRF_K,
 )
 
 
@@ -35,6 +36,22 @@ class HybridSearchResult(TypedDict):
     bm25_score: float
     semantic_score: float
     hybrid_score: float
+
+
+class RRFSearchScore(TypedDict):
+    doc: Movie
+    bm_25_rank: int
+    semantic_rank: int
+    rrf_score: float
+
+
+class RRFSearchResult(TypedDict):
+    id: int
+    title: str
+    description: str
+    bm_25_rank: int
+    semantic_rank: int
+    rrf_score: float
 
 
 class HybridSearch:
@@ -133,8 +150,80 @@ class HybridSearch:
         # Return the final list of results.
         return results
 
-    def rrf_search(self, query, k, limit=10):
-        raise NotImplementedError("RRF hybrid search is not implemented yet.")
+    def rrf_search(
+        self, query: str, k: int = DEFAULT_RRF_K, limit: int = DEFAULT_SEARCH_LIMIT
+    ):
+        bm25_results = self._bm25_search(query, limit * SEARCH_LIMIT_MULTIPLIER)
+        semantic_results = self.semantic_search.search_chunks(
+            query, limit * SEARCH_LIMIT_MULTIPLIER
+        )
+
+        # sort results to get documents ranks
+        sorted_bm25_results = sorted(
+            bm25_results,
+            key=lambda item: item["score"],
+            reverse=True,
+        )
+        sorted_semantic_results = sorted(
+            semantic_results,
+            key=lambda item: item["score"],
+            reverse=True,
+        )
+
+        # get document ranks as a list
+        bm25_doc_ids_ranked = list(
+            map(lambda result: result["id"], sorted_bm25_results)
+        )
+        semantic_doc_ids_ranked = list(
+            map(lambda result: result["id"], sorted_semantic_results)
+        )
+
+        # Create a dictionary mapping document IDs to the documents themselves and their BM25 and semantic ranks
+        rrf_scores_map: dict[int, RRFSearchScore] = {}
+        for doc in self.documents:
+            doc_id = doc["id"]
+            rrf_scores_map[doc_id] = {}
+
+            bm25_rank = None
+            semantic_rank = None
+
+            if doc_id in bm25_doc_ids_ranked:
+                bm25_rank = bm25_doc_ids_ranked.index(doc_id)
+            if doc_id in semantic_doc_ids_ranked:
+                semantic_rank = semantic_doc_ids_ranked.index(doc_id)
+
+            rrf_scores_map[doc_id]["doc"] = doc
+            rrf_scores_map[doc_id]["bm25_rank"] = bm25_rank
+            rrf_scores_map[doc_id]["semantic_rank"] = semantic_rank
+            # For each document, calculate the RRF score using the rrf_score function and add that score to each document as well
+            bm25_rrf_score = rrf_score(bm25_rank, k)
+            semantic_rrf_score = rrf_score(semantic_rank, k)
+            rrf_scores_map[doc_id]["rrf_score"] = bm25_rrf_score + semantic_rrf_score
+
+        # sort the documents by score in descending order
+        sorted_scores = sorted(
+            rrf_scores_map.items(),
+            key=lambda item: item[1]["rrf_score"],
+            reverse=True,
+        )
+
+        # return the top limit documents along with their scores
+        top_scores = sorted_scores[:limit]
+
+        # Format the results and limit the movie description to the first 100 characters.
+        results: list[RRFSearchResult] = []
+        for doc_id, result in top_scores:
+            doc = result["doc"]
+            search_result: RRFSearchResult = {}
+            search_result["id"] = doc_id
+            search_result["title"] = doc["title"]
+            search_result["description"] = doc["description"][:DOCUMENT_PREVIEW_LENGTH]
+            search_result["bm25_rank"] = result["bm25_rank"]
+            search_result["semantic_rank"] = result["semantic_rank"]
+            search_result["rrf_score"] = round(result["rrf_score"], SCORE_PRECISION)
+            results.append(search_result)
+        # Return the final list of results.
+        return results
 
 
 def normalize_scores(scores: list[float]):
@@ -179,5 +268,31 @@ def weighted_search_command(
         print(f"Hybrid Score: {result["hybrid_score"]:.4f}")
         print(
             f"BM25: {result["bm25_score"]:.4f}, Semantic: {result["semantic_score"]:.4f}"
+        )
+        print(f"   {result["description"]}...")
+
+
+def rrf_score(rank: int, k: int = DEFAULT_RRF_K):
+    if rank is None:
+        return 0
+    return 1 / (k + rank)
+
+
+def rrf_search_command(
+    query: str, k: int = DEFAULT_RRF_K, limit: float = DEFAULT_SEARCH_LIMIT
+):
+    documents = load_movies()
+    search_instance = HybridSearch(documents)
+
+    results = search_instance.rrf_search(query, k, limit)
+
+    print(f"Query: {query}")
+    print(f"k: {k}")
+    print("Results:")
+    for i, result in enumerate(results, 1):
+        print(f"\n{i}. {result["title"]}")
+        print(f"RRF Score: {result["rrf_score"]:.4f}")
+        print(
+            f"BM25 Rank: {result["bm25_rank"]}, Semantic Rank: {result["semantic_rank"]}"
         )
         print(f"   {result["description"]}...")

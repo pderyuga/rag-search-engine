@@ -1,7 +1,11 @@
 import argparse
 
-from lib.hybrid_search import normalize_scores, weighted_search_command
-from lib.search_utils import DEFAULT_ALPHA, DEFAULT_SEARCH_LIMIT
+from lib.hybrid_search import (
+    normalize_scores,
+    weighted_search_command,
+    rrf_search_command,
+)
+from lib.search_utils import DEFAULT_ALPHA, DEFAULT_SEARCH_LIMIT, DEFAULT_RRF_K
 
 
 def main() -> None:
@@ -34,6 +38,25 @@ def main() -> None:
         help="Maximum results to return",
     )
 
+    rrf_search_parser = subparsers.add_parser(
+        "rrf-search", help="Perform reciprocal rank fusion search"
+    )
+    rrf_search_parser.add_argument("query", type=str, help="Search query")
+    rrf_search_parser.add_argument(
+        "--k",
+        type=float,
+        nargs="?",
+        default=DEFAULT_RRF_K,
+        help="RRF k parameter controlling weight distribution",
+    )
+    rrf_search_parser.add_argument(
+        "--limit",
+        type=int,
+        nargs="?",
+        default=DEFAULT_SEARCH_LIMIT,
+        help="Maximum results to return",
+    )
+
     args = parser.parse_args()
 
     match args.command:
@@ -46,6 +69,9 @@ def main() -> None:
 
         case "weighted-search":
             weighted_search_command(args.query, args.alpha, args.limit)
+
+        case "rrf-search":
+            rrf_search_command(args.query, args.k, args.limit)
 
         case _:
             parser.print_help()

@@ -14,6 +14,7 @@ DEFAULT_SEMANTIC_CHUNK_SIZE = 4
 
 DEFAULT_ALPHA = 0.5
 SEARCH_LIMIT_MULTIPLIER = 500
+DEFAULT_RRF_K = 60
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
