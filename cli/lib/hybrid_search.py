@@ -4,6 +4,7 @@ from typing import TypedDict, Optional
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from .query_enhancement import enhance_query
+from .results_reranking import rerank_results
 
 from .search_utils import (
     load_movies,
@@ -14,6 +15,7 @@ from .search_utils import (
     DOCUMENT_PREVIEW_LENGTH,
     SCORE_PRECISION,
     DEFAULT_RRF_K,
+    RERANKING_SEARCH_LIMIT_MULTIPLIER,
 )
 
 
@@ -284,6 +286,7 @@ def rrf_search_command(
     k: int = DEFAULT_RRF_K,
     limit: float = DEFAULT_SEARCH_LIMIT,
     enhance: Optional[str] = None,
+    rerank_method: Optional[str] = None,
 ):
     documents = load_movies()
     search_instance = HybridSearch(documents)
@@ -294,7 +297,13 @@ def rrf_search_command(
         enhanced_query = enhance_query(query, method=enhance)
         query = enhanced_query
 
-    results = search_instance.rrf_search(query, k, limit)
+    search_limit = limit * RERANKING_SEARCH_LIMIT_MULTIPLIER if rerank_method else limit
+    results = search_instance.rrf_search(query, k, search_limit)
+
+    reranked = False
+    if rerank_method:
+        results = rerank_results(query, results, method=rerank_method, limit=limit)
+        reranked = True
 
     if enhance:
         print(f"Enhanced query ({enhance}): '{original_query}' -> '{enhanced_query}'")
@@ -304,6 +313,8 @@ def rrf_search_command(
     print("Results:")
     for i, result in enumerate(results, 1):
         print(f"\n{i}. {result["title"]}")
+        if reranked:
+            print(f"Rerank Score: {result["rank"]}/10")
         print(f"RRF Score: {result["rrf_score"]:.4f}")
         print(
             f"BM25 Rank: {result["bm25_rank"]}, Semantic Rank: {result["semantic_rank"]}"
