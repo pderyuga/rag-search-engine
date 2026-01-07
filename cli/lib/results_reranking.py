@@ -1,4 +1,5 @@
 import os
+import json
 from typing import TypedDict, Optional
 
 from dotenv import load_dotenv
@@ -65,9 +66,46 @@ Score:"""
 
     sorted_results = sorted(
         results,
-        key=lambda item: item["rank"],
+        key=lambda result: result["rank"],
         reverse=True,
     )
+
+    top_results = sorted_results[:limit]
+
+    return top_results
+
+
+def batch_rerank(
+    query: str,
+    results: list[RRFSearchResult],
+    limit: Optional[int] = DEFAULT_SEARCH_LIMIT,
+) -> list[RankedRRFSearchResult]:
+    doc_list_str = str(results)
+
+    prompt = f"""Rank these movies by relevance to the search query.
+
+Query: "{query}"
+
+Movies:
+{doc_list_str}
+
+Return ONLY the IDs in order of relevance (best match first). Return a valid JSON list, nothing else. For example:
+
+[75, 12, 34, 2, 1]
+"""
+
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt,
+    )
+
+    stripped_response = (response.text or "").strip().strip('"')
+    scores_list: list[int] = json.loads(stripped_response)
+
+    for doc in results:
+        doc["rank"] = scores_list.index(doc["id"] + 1)
+
+    sorted_results = sorted(results, key=lambda result: result["rank"], reverse=False)
 
     top_results = sorted_results[:limit]
 
@@ -83,6 +121,9 @@ def rerank_results(
     match method:
         case "individual":
             return individual_rerank(query, results, limit)
+
+        case "batch":
+            return batch_rerank(query, results, limit)
 
         case _:
             return results
