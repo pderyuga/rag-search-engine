@@ -59,7 +59,7 @@ def main() -> None:
     rrf_search_parser.add_argument(
         "--enhance",
         type=str,
-        choices=["spell"],
+        choices=["spell", "rewrite"],
         help="Query enhancement method",
     )
 
@@ -77,10 +77,7 @@ def main() -> None:
             weighted_search_command(args.query, args.alpha, args.limit)
 
         case "rrf-search":
-            if args.enhance == "spell":
-                rrf_search_command(args.query, args.k, args.limit, args.enhance)
-            else:
-                rrf_search_command(args.query, args.k, args.limit)
+            rrf_search_command(args.query, args.k, args.limit, args.enhance)
 
         case _:
             parser.print_help()
