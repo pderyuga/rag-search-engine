@@ -1,6 +1,6 @@
 # RAG Search Engine
 
-A movie search engine built using Retrieval-Augmented Generation (RAG) concepts, implementing BM25 keyword search and semantic search with embeddings. This project is based on [Boot.dev's "Learn Retrieval Augmented Generation" course](https://www.boot.dev/courses/learn-retrieval-augmented-generation).
+A movie search engine built using Retrieval-Augmented Generation (RAG) concepts, implementing BM25 keyword search, semantic search with embeddings, and hybrid search combining both approaches. This project is based on [Boot.dev's "Learn Retrieval Augmented Generation" course](https://www.boot.dev/courses/learn-retrieval-augmented-generation).
 
 ## Prerequisites
 
@@ -469,6 +469,92 @@ python cli/semantic_search_cli.py semantic_chunk "First sentence. Second sentenc
 
 This respects sentence boundaries for more meaningful chunks.
 
+### Embed Chunks Command
+
+Generate embeddings for chunked movie descriptions:
+
+```bash
+python cli/semantic_search_cli.py embed_chunks
+```
+
+This preprocesses the movie dataset by:
+- Splitting each movie description into semantic chunks
+- Generating embeddings for each chunk
+- Saving chunk embeddings and metadata to cache
+
+Useful for handling long documents that exceed embedding model limits. Run this once before using chunked search.
+
+### Search Chunked Command
+
+Search using chunked document embeddings:
+
+```bash
+python cli/semantic_search_cli.py search_chunked "your query" [--limit N]
+```
+
+Example:
+
+```bash
+python cli/semantic_search_cli.py search_chunked "romantic comedy" --limit 10
+```
+
+This searches at the chunk level and aggregates results by movie, keeping the highest scoring chunk for each movie. Better for finding specific details in long descriptions.
+
+## Hybrid Search
+
+Hybrid search combines both BM25 keyword search and semantic search to leverage the strengths of both approaches. It normalizes scores from each method and combines them for better results.
+
+### Normalize Scores Command
+
+Normalize a list of scores to the 0-1 range (useful for understanding score normalization):
+
+```bash
+python cli/hybrid_search_cli.py normalize <score1> <score2> [score3...]
+```
+
+Example:
+
+```bash
+python cli/hybrid_search_cli.py normalize 0.5 2.3 1.2 0.5 0.1
+```
+
+### Weighted Hybrid Search Command
+
+Search using a weighted combination of BM25 and semantic scores:
+
+```bash
+python cli/hybrid_search_cli.py weighted-search "query" [--alpha N] [--limit N]
+```
+
+Example:
+
+```bash
+python cli/hybrid_search_cli.py weighted-search "space adventure"
+python cli/hybrid_search_cli.py weighted-search "romantic comedy" --alpha 0.7 --limit 5
+```
+
+The `alpha` parameter controls the weight distribution:
+- `alpha = 0.0`: Pure semantic search
+- `alpha = 0.5`: Balanced (default)
+- `alpha = 1.0`: Pure BM25 keyword search
+
+### RRF Hybrid Search Command
+
+Search using Reciprocal Rank Fusion (alternative hybrid approach):
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "query" [--k N] [--limit N]
+```
+
+Example:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "space adventure"
+python cli/hybrid_search_cli.py rrf-search "action thriller" --k 60 --limit 10
+```
+
+RRF combines rankings from both search methods without requiring score normalization. The `k` parameter (default=60) controls how much weight is given to lower-ranked results.
+
 ## Project Structure
 
 ```
@@ -478,13 +564,17 @@ rag-search-engine/
 │   ├── docmap.pkl                # Pickled document mapping
 │   ├── tf.pkl                    # Pickled term frequencies
 │   ├── doc_lengths.pkl           # Pickled document lengths
-│   └── movie_embeddings.npy      # Cached movie embeddings for semantic search
+│   ├── movie_embeddings.npy      # Cached movie embeddings for semantic search
+│   ├── chunk_embeddings.npy      # Cached chunk embeddings for chunked search
+│   └── chunk_metadata.json       # Metadata mapping chunks to movies
 ├── cli/
 │   ├── keyword_search_cli.py    # Keyword search CLI entry point
 │   ├── semantic_search_cli.py   # Semantic search CLI entry point
+│   ├── hybrid_search_cli.py     # Hybrid search CLI entry point
 │   └── lib/
 │       ├── keyword_search.py     # Keyword search implementation
 │       ├── semantic_search.py    # Semantic search implementation
+│       ├── hybrid_search.py      # Hybrid search implementation
 │       └── search_utils.py       # Shared utility functions
 ├── data/
 │   ├── movies.json               # Movie dataset (download required)
@@ -495,7 +585,7 @@ rag-search-engine/
 └── README.md                     # This file
 ```
 
-**Note:** The `cache/` directory is automatically created when you run the `build` command (for keyword search) or when you first run semantic search commands (which creates `movie_embeddings.npy`). The sentence transformer model itself is downloaded by the library and cached separately on first use.
+**Note:** The `cache/` directory is automatically created when you run the `build` command (for keyword search) or when you first run semantic/hybrid search commands. Chunked search creates additional cache files (`chunk_embeddings.npy` and `chunk_metadata.json`) when you run `embed_chunks`. The sentence transformer model itself is downloaded by the library and cached separately on first use.
 
 ## Notes
 
