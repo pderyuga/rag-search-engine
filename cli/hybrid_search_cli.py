@@ -56,6 +56,12 @@ def main() -> None:
         default=DEFAULT_SEARCH_LIMIT,
         help="Maximum results to return",
     )
+    rrf_search_parser.add_argument(
+        "--enhance",
+        type=str,
+        choices=["spell"],
+        help="Query enhancement method",
+    )
 
     args = parser.parse_args()
 
@@ -71,7 +77,10 @@ def main() -> None:
             weighted_search_command(args.query, args.alpha, args.limit)
 
         case "rrf-search":
-            rrf_search_command(args.query, args.k, args.limit)
+            if args.enhance == "spell":
+                rrf_search_command(args.query, args.k, args.limit, args.enhance)
+            else:
+                rrf_search_command(args.query, args.k, args.limit)
 
         case _:
             parser.print_help()

@@ -1,8 +1,9 @@
 import os
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
+from .query_enhancement import enhance_query
 
 from .search_utils import (
     load_movies,
@@ -279,14 +280,26 @@ def rrf_score(rank: int, k: int = DEFAULT_RRF_K):
 
 
 def rrf_search_command(
-    query: str, k: int = DEFAULT_RRF_K, limit: float = DEFAULT_SEARCH_LIMIT
+    query: str,
+    k: int = DEFAULT_RRF_K,
+    limit: float = DEFAULT_SEARCH_LIMIT,
+    enhance: Optional[str] = None,
 ):
     documents = load_movies()
     search_instance = HybridSearch(documents)
 
+    original_query = query
+    enhanced_query = None
+    if enhance:
+        enhanced_query = enhance_query(query, method=enhance)
+        query = enhanced_query
+
     results = search_instance.rrf_search(query, k, limit)
 
-    print(f"Query: {query}")
+    if enhance:
+        print(f"Enhanced query ({enhance}): '{original_query}' -> '{enhanced_query}'")
+    else:
+        print(f"Query: {query}")
     print(f"k: {k}")
     print("Results:")
     for i, result in enumerate(results, 1):
