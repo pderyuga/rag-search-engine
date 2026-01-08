@@ -1,17 +1,14 @@
 import os
-import json
 from dotenv import load_dotenv
 from google import genai
 
 from .search_utils import (
     load_movies,
-    load_golden_dataset,
     DEFAULT_SEARCH_LIMIT,
     DEFAULT_RRF_K,
 )
 from .semantic_search import SemanticSearch
 from .hybrid_search import HybridSearch
-from .results_reranking import RRFSearchResult, RankedRRFSearchResult
 
 load_dotenv()
 project = os.environ.get("GEMINI_PROJECT")
@@ -28,7 +25,7 @@ def rag_command(query: str, k: int = DEFAULT_RRF_K, limit: int = DEFAULT_SEARCH_
     semantic_search.load_or_create_embeddings(movies)
     hybrid_search = HybridSearch(movies)
 
-    results = hybrid_search.rrf_search(query, DEFAULT_RRF_K, limit)
+    results = hybrid_search.rrf_search(query, k, limit)
 
     docs = str([f"{result["title"]} - {result["description"]}" for result in results])
 
@@ -53,4 +50,43 @@ Provide a comprehensive answer that addresses the query:"""
         print(f" - {result["title"]}")
     print()
     print("RAG Response:")
+    print(response_text)
+
+
+def summarize_command(
+    query: str, k: int = DEFAULT_RRF_K, limit: int = DEFAULT_SEARCH_LIMIT
+):
+    movies = load_movies()
+
+    semantic_search = SemanticSearch()
+    semantic_search.load_or_create_embeddings(movies)
+    hybrid_search = HybridSearch(movies)
+
+    results = hybrid_search.rrf_search(query, k, limit)
+
+    docs = str([f"{result["title"]} - {result["description"]}" for result in results])
+
+    prompt = f"""
+Provide information useful to this query by synthesizing information from multiple search results in detail.
+The goal is to provide comprehensive information so that users know what their options are.
+Your response should be information-dense and concise, with several key pieces of information about the genre, plot, etc. of each movie.
+This should be tailored to Hoopla users. Hoopla is a movie streaming service.
+Query: {query}
+Search Results:
+{docs}
+Provide a comprehensive 3-4 sentence answer that combines information from multiple sources:
+"""
+
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt,
+    )
+
+    response_text = (response.text or "").strip().strip('"')
+
+    print("Search Results:")
+    for result in results:
+        print(f" - {result["title"]}")
+    print()
+    print("LLM Summary:")
     print(response_text)
