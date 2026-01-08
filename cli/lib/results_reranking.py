@@ -1,6 +1,7 @@
 import os
 import json
 from typing import TypedDict, Optional
+from sentence_transformers import CrossEncoder
 
 from dotenv import load_dotenv
 from google import genai
@@ -112,6 +113,30 @@ Return ONLY the IDs in order of relevance (best match first). Return a valid JSO
     return top_results
 
 
+def cross_encoder_rerank(
+    query: str,
+    results: list[RRFSearchResult],
+    limit: Optional[int] = DEFAULT_SEARCH_LIMIT,
+) -> list[RankedRRFSearchResult]:
+    pairs = []
+    for doc in results:
+        pairs.append([query, f"{doc.get('title', '')} - {doc.get('description', '')}"])
+
+    cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
+
+    # scores is a list of numbers, one for each pair
+    scores = cross_encoder.predict(pairs)
+
+    for idx, doc in enumerate(results):
+        doc["rank"] = scores[idx]
+
+    sorted_results = sorted(results, key=lambda result: result["rank"], reverse=True)
+
+    top_results = sorted_results[:limit]
+
+    return top_results
+
+
 def rerank_results(
     query: str,
     results: list[RRFSearchResult],
@@ -124,6 +149,9 @@ def rerank_results(
 
         case "batch":
             return batch_rerank(query, results, limit)
+
+        case "cross_encoder":
+            return cross_encoder_rerank(query, results, limit)
 
         case _:
             return results
