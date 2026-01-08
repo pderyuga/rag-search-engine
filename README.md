@@ -244,7 +244,24 @@ yourself
 yourselves
 ```
 
-### 5. Configure Gemini/Vertex AI (Optional - for AI-powered features)
+### 5. Create Golden Dataset (Optional - for evaluation)
+
+For testing and evaluating search quality, you'll need a golden dataset with test queries and known relevant documents.
+
+Create `data/golden_dataset.json` with test cases in this format:
+
+```json
+[
+  {
+    "query": "your test query",
+    "relevant_docs": ["Movie Title 1", "Movie Title 2"]
+  }
+]
+```
+
+This is used by the evaluation system to measure Precision@k, Recall@k, and F1 scores.
+
+### 6. Configure Gemini/Vertex AI (Optional - for AI-powered features)
 
 For query enhancement and results reranking features, configure your Google Cloud credentials:
 
@@ -266,7 +283,7 @@ GEMINI_LOCATION=your-region (e.g., us-central1)
 - Appropriate authentication (gcloud CLI configured or service account)
 - The AI features (`--enhance` and `--rerank-method` flags) are optional and the search engine works without them
 
-### 6. Build the Inverted Index
+### 7. Build the Inverted Index
 
 Before you can search, you need to build the inverted index from the movie data:
 
@@ -638,6 +655,88 @@ You can combine both enhancement and reranking:
 python cli/hybrid_search_cli.py rrf-search "scary bear movie" --enhance rewrite --rerank-method batch --limit 5
 ```
 
+#### AI-Powered Results Evaluation (Optional)
+
+Use the `--evaluate` flag to get AI-powered quality assessment of search results:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "query" --evaluate
+```
+
+This uses Gemini AI to judge each result's relevance on a 0-3 scale:
+- **3**: Highly relevant
+- **2**: Relevant
+- **1**: Marginally relevant
+- **0**: Not relevant
+
+Example:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "romantic comedy" --limit 10 --evaluate
+```
+
+You can combine evaluation with enhancement and reranking:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "space adventure" --enhance rewrite --rerank-method batch --evaluate
+```
+
+## Search Evaluation
+
+The evaluation system helps measure and improve search quality using standardized information retrieval metrics.
+
+### Evaluation Command
+
+Evaluate search performance using a golden dataset:
+
+```bash
+python cli/evaluation_cli.py [--limit N]
+```
+
+The `--limit` parameter sets the k value for Precision@k and Recall@k calculations (default=5).
+
+Example:
+
+```bash
+python cli/evaluation_cli.py
+python cli/evaluation_cli.py --limit 10
+```
+
+This command:
+1. Runs RRF search on test queries from `data/golden_dataset.json`
+2. Compares results against known relevant documents
+3. Calculates metrics for each query:
+   - **Precision@k**: What fraction of retrieved documents are relevant?
+   - **Recall@k**: What fraction of relevant documents were retrieved?
+   - **F1 Score**: Harmonic mean of precision and recall
+
+Example output:
+
+```
+k=5
+
+- Query: space adventure movies
+  - Precision@5: 0.8000
+  - Recall@5: 0.6667
+  - F1 Score: 0.7273
+  - Retrieved: Star Wars. The Empire Strikes Back. Alien. Interstellar. Blade Runner
+  - Relevant: Star Wars, The Empire Strikes Back, Alien, Interstellar, Gravity, The Martian
+```
+
+### Understanding the Metrics
+
+- **Precision@k**: Of the top k results returned, what percentage are actually relevant? Higher is better. Perfect score = 1.0.
+  
+- **Recall@k**: Of all the relevant documents in the dataset, what percentage did we find in the top k results? Higher is better. Perfect score = 1.0.
+
+- **F1 Score**: Balances precision and recall into a single metric. Useful when you care about both missing relevant documents (low recall) and including irrelevant ones (low precision).
+
+These metrics help you:
+- Compare different search algorithms
+- Tune parameters (like alpha, k, enhancement methods)
+- Identify queries where search performs poorly
+- Track improvements over time
+
 ## Project Structure
 
 ```
@@ -654,6 +753,7 @@ rag-search-engine/
 │   ├── keyword_search_cli.py    # Keyword search CLI entry point
 │   ├── semantic_search_cli.py   # Semantic search CLI entry point
 │   ├── hybrid_search_cli.py     # Hybrid search CLI entry point
+│   ├── evaluation_cli.py         # Search evaluation CLI entry point
 │   ├── test_gemini.py            # Test script for Gemini AI integration
 │   └── lib/
 │       ├── keyword_search.py     # Keyword search implementation
@@ -661,10 +761,12 @@ rag-search-engine/
 │       ├── hybrid_search.py      # Hybrid search implementation
 │       ├── query_enhancement.py  # AI-powered query enhancement (spell, rewrite, expand)
 │       ├── results_reranking.py  # AI-powered results reranking
+│       ├── evaluation.py         # Search evaluation metrics and LLM judging
 │       └── search_utils.py       # Shared utility functions
 ├── data/
 │   ├── movies.json               # Movie dataset (download required)
-│   └── stopwords.txt             # Stop words for text processing
+│   ├── stopwords.txt             # Stop words for text processing
+│   └── golden_dataset.json       # Test queries with known relevant documents (optional)
 ├── .env                          # Environment variables (Gemini/Vertex AI config)
 ├── .env.template                 # Template for environment variables configuration
 ├── .gitignore                    # Git ignore rules

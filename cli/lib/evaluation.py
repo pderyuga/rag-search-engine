@@ -10,7 +10,7 @@ from .search_utils import (
     DEFAULT_RRF_K,
 )
 from .semantic_search import SemanticSearch
-from .hybrid_search import HybridSearch, RRFSearchResult
+from .hybrid_search import HybridSearch
 from .results_reranking import RRFSearchResult, RankedRRFSearchResult
 
 load_dotenv()
