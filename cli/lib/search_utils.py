@@ -21,6 +21,7 @@ DEFAULT_RRF_K = 60
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 DATA_PATH = os.path.join(PROJECT_ROOT, "data", "movies.json")
 STOPWORDS_PATH = os.path.join(PROJECT_ROOT, "data", "stopwords.txt")
+GOLDEN_DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "golden_dataset.json")
 
 CACHE_PATH = os.path.join(PROJECT_ROOT, "cache")
 INDEX_PATH = os.path.join(CACHE_PATH, "index.pkl")
@@ -43,3 +44,9 @@ def load_stopwords() -> list[str]:
         content = f.read()
     stopwords = content.splitlines()
     return stopwords
+
+
+def load_golden_dataset() -> list[str]:
+    with open(GOLDEN_DATASET_PATH, "r") as f:
+        golden_data = json.load(f)
+    return golden_data["test_cases"]
