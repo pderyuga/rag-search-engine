@@ -20,6 +20,7 @@ def main():
     for test_case in test_cases:
         print(f"- Query: {test_case["query"]}")
         print(f"  - Precision@{limit}: {test_case["precision"]:.4f}")
+        print(f"  - Recall@{limit}: {test_case["recall"]:.4f}")
         print(f"  - Retrieved: {'. '.join(test_case["docs"])}")
         print(f"  - Relevant: {', '.join(test_case["relevant_docs"])}")
         print()

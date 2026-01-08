@@ -29,7 +29,11 @@ def evaluate_command(limit: int = DEFAULT_SEARCH_LIMIT):
         relevant_retrieved = len(relevant_titles)
         precision = relevant_retrieved / total_retrieved
 
+        total_relevant = len(test_case["relevant_docs"])
+        recall = relevant_retrieved / total_relevant
+
         test_case["docs"] = titles
         test_case["precision"] = precision
+        test_case["recall"] = recall
 
     return test_cases
