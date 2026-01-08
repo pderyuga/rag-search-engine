@@ -6,9 +6,12 @@ A movie search engine built using Retrieval-Augmented Generation (RAG) concepts,
 
 - Python 3.13
 - `uv` package manager (for dependency management)
+- Google Cloud Project with Vertex AI enabled (for AI-powered query enhancement and reranking)
 - Dependencies:
   - `nltk==3.9.1` (for text processing)
   - `sentence-transformers>=5.2.0` (for semantic search embeddings)
+  - `google-genai>=1.56.0` (for AI-powered query enhancement and results reranking)
+  - `python-dotenv>=1.2.1` (for environment configuration)
 
 ## Setup Instructions
 
@@ -241,7 +244,29 @@ yourself
 yourselves
 ```
 
-### 5. Build the Inverted Index
+### 5. Configure Gemini/Vertex AI (Optional - for AI-powered features)
+
+For query enhancement and results reranking features, configure your Google Cloud credentials:
+
+Copy the template file and configure your credentials:
+
+```bash
+cp .env.template .env
+```
+
+Then edit `.env` and replace the placeholder values with your actual Google Cloud configuration:
+
+```bash
+GEMINI_PROJECT=your-gcp-project-id
+GEMINI_LOCATION=your-region (e.g., us-central1)
+```
+
+**Note:** These features require:
+- A Google Cloud Project with Vertex AI API enabled
+- Appropriate authentication (gcloud CLI configured or service account)
+- The AI features (`--enhance` and `--rerank-method` flags) are optional and the search engine works without them
+
+### 6. Build the Inverted Index
 
 Before you can search, you need to build the inverted index from the movie data:
 
@@ -543,7 +568,7 @@ The `alpha` parameter controls the weight distribution:
 Search using Reciprocal Rank Fusion (alternative hybrid approach):
 
 ```bash
-python cli/hybrid_search_cli.py rrf-search "query" [--k N] [--limit N]
+python cli/hybrid_search_cli.py rrf-search "query" [--k N] [--limit N] [--enhance METHOD] [--rerank-method METHOD]
 ```
 
 Example:
@@ -554,6 +579,64 @@ python cli/hybrid_search_cli.py rrf-search "action thriller" --k 60 --limit 10
 ```
 
 RRF combines rankings from both search methods without requiring score normalization. The `k` parameter (default=60) controls how much weight is given to lower-ranked results.
+
+#### AI-Powered Query Enhancement (Optional)
+
+Use the `--enhance` flag to improve search queries with Gemini AI:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "query" --enhance METHOD
+```
+
+Enhancement methods:
+- **spell**: Fix spelling errors in the query
+- **rewrite**: Rewrite the query to be more specific and searchable
+- **expand**: Add synonyms and related terms to the query
+
+Examples:
+
+```bash
+# Fix spelling errors
+python cli/hybrid_search_cli.py rrf-search "romntic commedy" --enhance spell
+
+# Rewrite vague queries to be more specific
+python cli/hybrid_search_cli.py rrf-search "that bear movie" --enhance rewrite
+
+# Expand with related terms
+python cli/hybrid_search_cli.py rrf-search "scary movie" --enhance expand
+```
+
+#### AI-Powered Results Reranking (Optional)
+
+Use the `--rerank-method` flag to reorder results using AI for better relevance:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "query" --rerank-method METHOD
+```
+
+Reranking methods:
+- **individual**: LLM scores each result individually (0-10 rating)
+- **batch**: LLM ranks all results at once (more efficient)
+- **cross_encoder**: Uses CrossEncoder model for relevance scoring (faster, no API calls)
+
+Examples:
+
+```bash
+# Individual scoring with Gemini
+python cli/hybrid_search_cli.py rrf-search "space adventure" --rerank-method individual
+
+# Batch reranking with Gemini
+python cli/hybrid_search_cli.py rrf-search "romantic comedy" --rerank-method batch --limit 10
+
+# CrossEncoder reranking (local, no API)
+python cli/hybrid_search_cli.py rrf-search "action thriller" --rerank-method cross_encoder
+```
+
+You can combine both enhancement and reranking:
+
+```bash
+python cli/hybrid_search_cli.py rrf-search "scary bear movie" --enhance rewrite --rerank-method batch --limit 5
+```
 
 ## Project Structure
 
@@ -571,14 +654,19 @@ rag-search-engine/
 │   ├── keyword_search_cli.py    # Keyword search CLI entry point
 │   ├── semantic_search_cli.py   # Semantic search CLI entry point
 │   ├── hybrid_search_cli.py     # Hybrid search CLI entry point
+│   ├── test_gemini.py            # Test script for Gemini AI integration
 │   └── lib/
 │       ├── keyword_search.py     # Keyword search implementation
 │       ├── semantic_search.py    # Semantic search implementation
 │       ├── hybrid_search.py      # Hybrid search implementation
+│       ├── query_enhancement.py  # AI-powered query enhancement (spell, rewrite, expand)
+│       ├── results_reranking.py  # AI-powered results reranking
 │       └── search_utils.py       # Shared utility functions
 ├── data/
 │   ├── movies.json               # Movie dataset (download required)
 │   └── stopwords.txt             # Stop words for text processing
+├── .env                          # Environment variables (Gemini/Vertex AI config)
+├── .env.template                 # Template for environment variables configuration
 ├── .gitignore                    # Git ignore rules
 ├── pyproject.toml                # Project configuration
 ├── uv.lock                       # Dependency lock file
