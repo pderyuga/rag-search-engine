@@ -320,3 +320,5 @@ def rrf_search_command(
             f"BM25 Rank: {result["bm25_rank"]}, Semantic Rank: {result["semantic_rank"]}"
         )
         print(f"   {result["description"]}...")
+
+    return results

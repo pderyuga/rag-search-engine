@@ -6,6 +6,7 @@ from lib.hybrid_search import (
     rrf_search_command,
 )
 from lib.search_utils import DEFAULT_ALPHA, DEFAULT_SEARCH_LIMIT, DEFAULT_RRF_K
+from lib.evaluation import llm_judge_results
 
 
 def main() -> None:
@@ -68,6 +69,11 @@ def main() -> None:
         choices=["individual", "batch", "cross_encoder"],
         help="Reranking method",
     )
+    rrf_search_parser.add_argument(
+        "--evaluate",
+        action="store_true",
+        help="Evaluate results using an llm",
+    )
 
     args = parser.parse_args()
 
@@ -83,9 +89,11 @@ def main() -> None:
             weighted_search_command(args.query, args.alpha, args.limit)
 
         case "rrf-search":
-            rrf_search_command(
+            results = rrf_search_command(
                 args.query, args.k, args.limit, args.enhance, args.rerank_method
             )
+            if args.evaluate:
+                llm_judge_results(args.query, results)
 
         case _:
             parser.print_help()
