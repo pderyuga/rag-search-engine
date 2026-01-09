@@ -6,7 +6,7 @@ from lib.search_utils import DEFAULT_SEARCH_LIMIT
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Multimodal Search CLI")
+    parser = argparse.ArgumentParser(description="Describe Image CLI")
     parser.add_argument("--image", type=str, help="The path to an image file")
     parser.add_argument("--query", type=str, help="Text query")
 
