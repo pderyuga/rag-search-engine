@@ -138,3 +138,48 @@ Answer:"""
     print()
     print("LLM Answer:")
     print(response_text)
+
+
+def question_command(
+    question: str, k: int = DEFAULT_RRF_K, limit: int = DEFAULT_SEARCH_LIMIT
+):
+    movies = load_movies()
+
+    semantic_search = SemanticSearch()
+    semantic_search.load_or_create_embeddings(movies)
+    hybrid_search = HybridSearch(movies)
+
+    results = hybrid_search.rrf_search(question, k, limit)
+
+    docs = str([f"{result["title"]} - {result["description"]}" for result in results])
+
+    prompt = f"""Answer the user's question based on the provided movies that are available on Hoopla.
+
+This should be tailored to Hoopla users. Hoopla is a movie streaming service.
+
+Question: {question}
+
+Documents:
+{docs}
+
+Instructions:
+- Answer questions directly and concisely
+- Be casual and conversational
+- Don't be cringe or hype-y
+- Talk like a normal person would in a chat conversation
+
+Answer:"""
+
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt,
+    )
+
+    response_text = (response.text or "").strip().strip('"')
+
+    print("Search Results:")
+    for result in results:
+        print(f" - {result["title"]}")
+    print()
+    print("Answer:")
+    print(response_text)

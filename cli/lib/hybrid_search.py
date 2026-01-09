@@ -220,7 +220,7 @@ class HybridSearch:
             search_result: RRFSearchResult = {}
             search_result["id"] = doc_id
             search_result["title"] = doc["title"]
-            search_result["description"] = doc["description"][:DOCUMENT_PREVIEW_LENGTH]
+            search_result["description"] = doc["description"]
             search_result["bm25_rank"] = result["bm25_rank"]
             search_result["semantic_rank"] = result["semantic_rank"]
             search_result["rrf_score"] = round(result["rrf_score"], SCORE_PRECISION)
@@ -319,6 +319,6 @@ def rrf_search_command(
         print(
             f"BM25 Rank: {result["bm25_rank"]}, Semantic Rank: {result["semantic_rank"]}"
         )
-        print(f"   {result["description"]}...")
+        print(f"   {result["description"][:DOCUMENT_PREVIEW_LENGTH]}...")
 
     return results
